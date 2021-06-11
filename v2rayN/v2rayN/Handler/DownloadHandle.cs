@@ -2,7 +2,6 @@
 using System.IO;
 using System.Net;
 using v2rayN.Base;
-using v2rayN.Mode;
 
 namespace v2rayN.Handler
 {
@@ -11,19 +10,10 @@ namespace v2rayN.Handler
     /// </summary>
     class DownloadHandle
     {
-        public event EventHandler<ResultEventArgs> AbsoluteCompleted;
-
         public event EventHandler<ResultEventArgs> UpdateCompleted;
 
         public event ErrorEventHandler Error;
-
-        public string DownloadFileName
-        {
-            get
-            {
-                return "v2ray-windows.zip";
-            }
-        }
+         
 
         public class ResultEventArgs : EventArgs
         {
@@ -37,70 +27,24 @@ namespace v2rayN.Handler
             }
         }
 
-        private string latestUrl = "https://github.com/v2ray/v2ray-core/releases/latest";
-        private const string coreURL = "https://github.com/v2ray/v2ray-core/releases/download/{0}/v2ray-windows-{1}.zip";
         private int progressPercentage = -1;
-        private bool blFirst = true;
         private long totalBytesToReceive = 0;
         private DateTime totalDatetime = new DateTime();
-
-
-        public void AbsoluteV2rayCore(Config config)
+        private int DownloadTimeout = -1;
+          
+        public WebClientEx DownloadFileAsync(string url, WebProxy webProxy, int downloadTimeout)
         {
-            ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072; //TLS 1.2
-            ServicePointManager.DefaultConnectionLimit = 256;
-            WebRequest request = WebRequest.Create(latestUrl);
-            request.BeginGetResponse(new AsyncCallback(OnResponseV2rayCore), request);
-        }
-
-        private void OnResponseV2rayCore(IAsyncResult ar)
-        {
+            WebClientEx ws = new WebClientEx();
             try
             {
-                HttpWebRequest request = (HttpWebRequest)ar.AsyncState;
-                HttpWebResponse response = (HttpWebResponse)request.EndGetResponse(ar);
-                string redirectUrl = response.ResponseUri.AbsoluteUri;
-                string version = redirectUrl.Substring(redirectUrl.LastIndexOf("/", StringComparison.Ordinal) + 1);
-
-                string osBit = string.Empty;
-                if (Environment.Is64BitProcess)
-                {
-                    osBit = "64";
-                }
-                else
-                {
-                    osBit = "32";
-                }
-                string url = string.Format(coreURL, version, osBit);
-                if (AbsoluteCompleted != null)
-                {
-                    AbsoluteCompleted(this, new ResultEventArgs(true, url));
-                }
-            }
-            catch (Exception ex)
-            {
-                Utils.SaveLog(ex.Message, ex);
-
-                if (Error != null)
-                    Error(this, new ErrorEventArgs(ex));
-            }
-        }
-
-
-        public void DownloadFileAsync(Config config, string url, WebProxy webProxy)
-        {
-            try
-            {
-                ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072; //TLS 1.2
-                ServicePointManager.DefaultConnectionLimit = 256;
-                if (UpdateCompleted != null)
-                {
-                    UpdateCompleted(this, new ResultEventArgs(false, "Downloading..."));
-                }
+                Utils.SetSecurityProtocol();
+                UpdateCompleted?.Invoke(this, new ResultEventArgs(false, UIRes.I18N("Downloading")));
 
                 progressPercentage = -1;
+                totalBytesToReceive = 0;
 
-                WebClientEx ws = new WebClientEx();
+                //WebClientEx ws = new WebClientEx();
+                DownloadTimeout = downloadTimeout;
                 if (webProxy != null)
                 {
                     ws.Proxy = webProxy;// new WebProxy(Global.Loopback, Global.httpPort);
@@ -108,28 +52,36 @@ namespace v2rayN.Handler
 
                 ws.DownloadFileCompleted += ws_DownloadFileCompleted;
                 ws.DownloadProgressChanged += ws_DownloadProgressChanged;
-                ws.DownloadFileAsync(new Uri(url), Utils.GetPath(DownloadFileName));
-                blFirst = true;
+                ws.DownloadFileAsync(new Uri(url), Utils.GetPath(Global.DownloadFileName));
             }
             catch (Exception ex)
             {
                 Utils.SaveLog(ex.Message, ex);
 
-                if (Error != null)
-                    Error(this, new ErrorEventArgs(ex));
+                Error?.Invoke(this, new ErrorEventArgs(ex));
             }
+            return ws;
         }
 
         void ws_DownloadProgressChanged(object sender, DownloadProgressChangedEventArgs e)
         {
-            if (blFirst)
-            {
-                totalBytesToReceive = e.TotalBytesToReceive - e.BytesReceived;
-                totalDatetime = DateTime.Now;
-                blFirst = false;
-            }
             if (UpdateCompleted != null)
             {
+                if (totalBytesToReceive == 0)
+                {
+                    totalDatetime = DateTime.Now;
+                    totalBytesToReceive = e.BytesReceived;
+                    return;
+                }
+                totalBytesToReceive = e.BytesReceived;
+
+                if (DownloadTimeout != -1)
+                {
+                    if ((DateTime.Now - totalDatetime).TotalSeconds > DownloadTimeout)
+                    {
+                        ((WebClientEx)sender).CancelAsync();
+                    }
+                }
                 if (progressPercentage != e.ProgressPercentage && e.ProgressPercentage % 10 == 0)
                 {
                     progressPercentage = e.ProgressPercentage;
@@ -138,32 +90,40 @@ namespace v2rayN.Handler
                 }
             }
         }
-
         void ws_DownloadFileCompleted(object sender, System.ComponentModel.AsyncCompletedEventArgs e)
         {
             try
             {
-                if (e.Error == null
-                    || Utils.IsNullOrEmpty(e.Error.ToString()))
+                if (UpdateCompleted != null)
                 {
-                    if (UpdateCompleted != null)
+                    if (e.Cancelled)
                     {
+                        ((WebClientEx)sender).Dispose();
                         TimeSpan ts = (DateTime.Now - totalDatetime);
-                        string speed = string.Format("{0} M/s", (totalBytesToReceive / ts.TotalMilliseconds / 1000).ToString("#0.##"));
-                        UpdateCompleted(this, new ResultEventArgs(true, speed));
+                        string speed = string.Format("{0} M/s", (totalBytesToReceive / ts.TotalMilliseconds / 1000).ToString("#0.0"));
+                        UpdateCompleted(this, new ResultEventArgs(true, speed.PadLeft(8, ' ')));
+                        return;
                     }
-                }
-                else
-                {
-                    throw e.Error;
+
+                    if (e.Error == null
+                        || Utils.IsNullOrEmpty(e.Error.ToString()))
+                    {
+
+                        TimeSpan ts = (DateTime.Now - totalDatetime);
+                        string speed = string.Format("{0} M/s", (totalBytesToReceive / ts.TotalMilliseconds / 1000).ToString("#0.0"));
+                        UpdateCompleted(this, new ResultEventArgs(true, speed.PadLeft(8, ' ')));
+                    }
+                    else
+                    {
+                        throw e.Error;
+                    }
                 }
             }
             catch (Exception ex)
             {
                 Utils.SaveLog(ex.Message, ex);
 
-                if (Error != null)
-                    Error(this, new ErrorEventArgs(ex));
+                Error?.Invoke(this, new ErrorEventArgs(ex));
             }
         }
 
@@ -176,8 +136,7 @@ namespace v2rayN.Handler
             string source = string.Empty;
             try
             {
-                ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072; //TLS 1.2
-                ServicePointManager.DefaultConnectionLimit = 256;
+                Utils.SetSecurityProtocol();
 
                 WebClientEx ws = new WebClientEx();
                 ws.DownloadStringCompleted += Ws_DownloadStringCompleted;
@@ -197,10 +156,7 @@ namespace v2rayN.Handler
                     || Utils.IsNullOrEmpty(e.Error.ToString()))
                 {
                     string source = e.Result;
-                    if (UpdateCompleted != null)
-                    {
-                        UpdateCompleted(this, new ResultEventArgs(true, source));
-                    }
+                    UpdateCompleted?.Invoke(this, new ResultEventArgs(true, source));
                 }
                 else
                 {
@@ -211,11 +167,27 @@ namespace v2rayN.Handler
             {
                 Utils.SaveLog(ex.Message, ex);
 
-                if (Error != null)
-                    Error(this, new ErrorEventArgs(ex));
+                Error?.Invoke(this, new ErrorEventArgs(ex));
             }
         }
 
+        public string WebDownloadStringSync(string url)
+        {
+            string source = string.Empty;
+            try
+            {
+                Utils.SetSecurityProtocol();
+
+                WebClientEx ws = new WebClientEx();
+
+                return ws.DownloadString(new Uri(url));
+            }
+            catch (Exception ex)
+            {
+                Utils.SaveLog(ex.Message, ex);
+                return string.Empty;
+            }
+        }
 
     }
 }
