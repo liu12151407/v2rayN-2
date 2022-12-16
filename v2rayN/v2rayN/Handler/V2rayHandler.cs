@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using v2rayN.Mode;
+using v2rayN.Resx;
 
 namespace v2rayN.Handler
 {
@@ -21,10 +22,9 @@ namespace v2rayN.Handler
     class V2rayHandler
     {
         private static string v2rayConfigRes = Global.v2rayConfigFileName;
-        private List<string> lstV2ray;
-        private string coreUrl;
+        private CoreInfo coreInfo;
         public event ProcessDelegate ProcessEvent;
-        //private int processId = 0;
+        private int processId = 0;
         private Process _process;
 
         public V2rayHandler()
@@ -36,35 +36,45 @@ namespace v2rayN.Handler
         /// </summary>
         public void LoadV2ray(Config config)
         {
-            if (config.coreType == ECoreType.v2fly_core)
-            {
-                lstV2ray = new List<string>
-                {
-                    "wv2ray",
-                    "v2ray"
-                };
-                coreUrl = Global.v2flyCoreUrl;
-            }
-            else
-            {
-                lstV2ray = new List<string>
-                {
-                    "xray"
-                };
-                coreUrl = Global.xrayCoreUrl;
-            }
-
             if (Global.reloadV2ray)
             {
+                var item = ConfigHandler.GetDefaultServer(ref config);
+                if (item == null)
+                {
+                    ShowMsg(false, ResUI.CheckServerSettings);
+                    return;
+                }
+
+                if (SetCore(config, item) != 0)
+                {
+                    ShowMsg(false, ResUI.CheckServerSettings);
+                    return;
+                }
                 string fileName = Utils.GetPath(v2rayConfigRes);
-                if (V2rayConfigHandler.GenerateClientConfig(config, fileName, false, out string msg) != 0)
+                if (V2rayConfigHandler.GenerateClientConfig(item, fileName, out string msg, out string content) != 0)
                 {
                     ShowMsg(false, msg);
                 }
                 else
                 {
-                    ShowMsg(true, msg);
+                    ShowMsg(false, msg);
+                    ShowMsg(true, $"[{config.GetGroupRemarks(item.groupId)}] {item.GetSummary()}");
                     V2rayRestart();
+                }
+
+                //start a socks service
+                if (_process != null && !_process.HasExited && item.configType == EConfigType.Custom && item.preSocksPort > 0)
+                {
+                    var itemSocks = new VmessItem()
+                    {
+                        configType = EConfigType.Socks,
+                        address = Global.Loopback,
+                        port = item.preSocksPort
+                    };
+                    if (V2rayConfigHandler.GenerateClientConfig(itemSocks, null, out string msg2, out string configStr) == 0)
+                    {
+                        processId = V2rayStartNew(configStr);
+                    }
                 }
             }
         }
@@ -73,7 +83,7 @@ namespace v2rayN.Handler
         /// 新建进程，载入V2ray配置文件字符串
         /// 返回新进程pid。
         /// </summary>
-        public int LoadV2rayConfigString(Config config, List<int> _selecteds)
+        public int LoadV2rayConfigString(Config config, List<ServerTestItem> _selecteds)
         {
             int pid = -1;
             string configStr = V2rayConfigHandler.GenerateClientSpeedtestConfigString(config, _selecteds, out string msg);
@@ -115,7 +125,11 @@ namespace v2rayN.Handler
                 }
                 else
                 {
-                    foreach (string vName in lstV2ray)
+                    if (coreInfo == null || coreInfo.coreExes == null)
+                    {
+                        return;
+                    }
+                    foreach (string vName in coreInfo.coreExes)
                     {
                         Process[] existing = Process.GetProcessesByName(vName);
                         foreach (Process p in existing)
@@ -129,27 +143,12 @@ namespace v2rayN.Handler
                     }
                 }
 
-                //bool blExist = true;
-                //if (processId > 0)
-                //{
-                //    Process p1 = Process.GetProcessById(processId);
-                //    if (p1 != null)
-                //    {
-                //        p1.Kill();
-                //        blExist = false;
-                //    }
-                //}
-                //if (blExist)
-                //{
-                //    foreach (string vName in lstV2ray)
-                //    {
-                //        Process[] killPro = Process.GetProcessesByName(vName);
-                //        foreach (Process p in killPro)
-                //        {
-                //            p.Kill();
-                //        }
-                //    }
-                //}
+                if (processId > 0)
+                {
+                    V2rayStopPid(processId);
+                    processId = 0;
+                }
+
             }
             catch (Exception ex)
             {
@@ -172,14 +171,12 @@ namespace v2rayN.Handler
             }
         }
 
-        private string V2rayFindexe()
+        private string V2rayFindexe(List<string> lstCoreTemp)
         {
-            //查找v2ray文件是否存在
             string fileName = string.Empty;
-            //lstV2ray.Reverse();
-            foreach (string name in lstV2ray)
+            foreach (string name in lstCoreTemp)
             {
-                string vName = string.Format("{0}.exe", name);
+                string vName = $"{name}.exe";
                 vName = Utils.GetPath(vName);
                 if (File.Exists(vName))
                 {
@@ -189,7 +186,7 @@ namespace v2rayN.Handler
             }
             if (Utils.IsNullOrEmpty(fileName))
             {
-                string msg = string.Format(UIRes.I18N("NotFoundCore"), coreUrl);
+                string msg = string.Format(ResUI.NotFoundCore, string.Join(", ", lstCoreTemp.ToArray()), coreInfo.coreUrl);
                 ShowMsg(false, msg);
             }
             return fileName;
@@ -200,11 +197,11 @@ namespace v2rayN.Handler
         /// </summary>
         private void V2rayStart()
         {
-            ShowMsg(false, string.Format(UIRes.I18N("StartService"), DateTime.Now.ToString()));
+            ShowMsg(false, string.Format(ResUI.StartService, DateTime.Now.ToString()));
 
             try
             {
-                string fileName = V2rayFindexe();
+                string fileName = V2rayFindexe(coreInfo.coreExes);
                 if (fileName == "") return;
 
                 Process p = new Process
@@ -212,31 +209,37 @@ namespace v2rayN.Handler
                     StartInfo = new ProcessStartInfo
                     {
                         FileName = fileName,
+                        Arguments = coreInfo.arguments,
                         WorkingDirectory = Utils.StartupPath(),
                         UseShellExecute = false,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
+                        RedirectStandardOutput = coreInfo.redirectInfo,
+                        RedirectStandardError = coreInfo.redirectInfo,
                         CreateNoWindow = true,
-                        StandardOutputEncoding = Encoding.UTF8
+                        StandardOutputEncoding = coreInfo.redirectInfo ? Encoding.UTF8 : null,
+                        StandardErrorEncoding = coreInfo.redirectInfo ? Encoding.UTF8 : null,
                     }
                 };
-                p.OutputDataReceived += new DataReceivedEventHandler((sender, e) =>
+                if (coreInfo.redirectInfo)
                 {
-                    if (!String.IsNullOrEmpty(e.Data))
+                    p.OutputDataReceived += (sender, e) =>
                     {
-                        string msg = e.Data + Environment.NewLine;
-                        ShowMsg(false, msg);
-                    }
-                });
+                        if (!String.IsNullOrEmpty(e.Data))
+                        {
+                            string msg = e.Data + Environment.NewLine;
+                            ShowMsg(false, msg);
+                        }
+                    };
+                }
                 p.Start();
-                p.PriorityClass = ProcessPriorityClass.High;
-                p.BeginOutputReadLine();
-                //processId = p.Id;
+                if (coreInfo.redirectInfo)
+                {
+                    p.BeginOutputReadLine();
+                }
                 _process = p;
 
                 if (p.WaitForExit(1000))
                 {
-                    throw new Exception(p.StandardError.ReadToEnd());
+                    throw new Exception(coreInfo.redirectInfo ? p.StandardError.ReadToEnd() : "启动进程失败并退出 (Failed to start the process and exited)");
                 }
 
                 Global.processJob.AddProcess(p.Handle);
@@ -253,11 +256,11 @@ namespace v2rayN.Handler
         /// </summary>
         private int V2rayStartNew(string configStr)
         {
-            ShowMsg(false, string.Format(UIRes.I18N("StartService"), DateTime.Now.ToString()));
+            ShowMsg(false, string.Format(ResUI.StartService, DateTime.Now.ToString()));
 
             try
             {
-                string fileName = V2rayFindexe();
+                string fileName = V2rayFindexe(new List<string> { "xray", "wv2ray", "v2ray" });
                 if (fileName == "") return -1;
 
                 Process p = new Process
@@ -272,17 +275,18 @@ namespace v2rayN.Handler
                         RedirectStandardOutput = true,
                         RedirectStandardError = true,
                         CreateNoWindow = true,
-                        StandardOutputEncoding = Encoding.UTF8
+                        StandardOutputEncoding = Encoding.UTF8,
+                        StandardErrorEncoding = Encoding.UTF8
                     }
                 };
-                p.OutputDataReceived += new DataReceivedEventHandler((sender, e) =>
+                p.OutputDataReceived += (sender, e) =>
                 {
                     if (!String.IsNullOrEmpty(e.Data))
                     {
                         string msg = e.Data + Environment.NewLine;
                         ShowMsg(false, msg);
                     }
-                });
+                };
                 p.Start();
                 p.BeginOutputReadLine();
 
@@ -332,6 +336,23 @@ namespace v2rayN.Handler
             {
                 Utils.SaveLog(ex.Message, ex);
             }
+        }
+
+        private int SetCore(Config config, VmessItem item)
+        {
+            if (item == null)
+            {
+                return -1;
+            }
+            var coreType = LazyConfig.Instance.GetCoreType(item, item.configType);
+
+            coreInfo = LazyConfig.Instance.GetCoreInfo(coreType);
+
+            if (coreInfo == null)
+            {
+                return -1;
+            }
+            return 0;
         }
     }
 }

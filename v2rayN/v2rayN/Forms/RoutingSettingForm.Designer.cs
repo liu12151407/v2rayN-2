@@ -35,6 +35,8 @@
             this.labRoutingTips = new System.Windows.Forms.Label();
             this.btnOK = new System.Windows.Forms.Button();
             this.panel1 = new System.Windows.Forms.Panel();
+            this.cmbdomainMatcher = new System.Windows.Forms.ComboBox();
+            this.label6 = new System.Windows.Forms.Label();
             this.chkenableRoutingAdvanced = new System.Windows.Forms.CheckBox();
             this.linkLabelRoutingDoc = new System.Windows.Forms.LinkLabel();
             this.cmbdomainStrategy = new System.Windows.Forms.ComboBox();
@@ -43,6 +45,8 @@
             this.menuRemove = new System.Windows.Forms.ToolStripMenuItem();
             this.menuSelectAll = new System.Windows.Forms.ToolStripMenuItem();
             this.menuSetDefaultRouting = new System.Windows.Forms.ToolStripMenuItem();
+            this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
+            this.menuImportAdvancedRules = new System.Windows.Forms.ToolStripMenuItem();
             this.MenuItemAdvanced = new System.Windows.Forms.ToolStripMenuItem();
             this.menuServer = new System.Windows.Forms.MenuStrip();
             this.MenuItemBasic = new System.Windows.Forms.ToolStripMenuItem();
@@ -119,11 +123,25 @@
             // 
             // panel1
             // 
+            this.panel1.Controls.Add(this.cmbdomainMatcher);
+            this.panel1.Controls.Add(this.label6);
             this.panel1.Controls.Add(this.chkenableRoutingAdvanced);
             this.panel1.Controls.Add(this.linkLabelRoutingDoc);
             this.panel1.Controls.Add(this.cmbdomainStrategy);
             resources.ApplyResources(this.panel1, "panel1");
             this.panel1.Name = "panel1";
+            // 
+            // cmbdomainMatcher
+            // 
+            this.cmbdomainMatcher.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbdomainMatcher.FormattingEnabled = true;
+            resources.ApplyResources(this.cmbdomainMatcher, "cmbdomainMatcher");
+            this.cmbdomainMatcher.Name = "cmbdomainMatcher";
+            // 
+            // label6
+            // 
+            resources.ApplyResources(this.label6, "label6");
+            this.label6.Name = "label6";
             // 
             // chkenableRoutingAdvanced
             // 
@@ -157,7 +175,9 @@
             this.menuAdd,
             this.menuRemove,
             this.menuSelectAll,
-            this.menuSetDefaultRouting});
+            this.menuSetDefaultRouting,
+            this.toolStripSeparator1,
+            this.menuImportAdvancedRules});
             this.cmsLv.Name = "cmsLv";
             this.cmsLv.OwnerItem = this.MenuItemAdvanced;
             resources.ApplyResources(this.cmsLv, "cmsLv");
@@ -185,6 +205,17 @@
             this.menuSetDefaultRouting.Name = "menuSetDefaultRouting";
             resources.ApplyResources(this.menuSetDefaultRouting, "menuSetDefaultRouting");
             this.menuSetDefaultRouting.Click += new System.EventHandler(this.menuSetDefaultRouting_Click);
+            // 
+            // toolStripSeparator1
+            // 
+            this.toolStripSeparator1.Name = "toolStripSeparator1";
+            resources.ApplyResources(this.toolStripSeparator1, "toolStripSeparator1");
+            // 
+            // menuImportAdvancedRules
+            // 
+            this.menuImportAdvancedRules.Name = "menuImportAdvancedRules";
+            resources.ApplyResources(this.menuImportAdvancedRules, "menuImportAdvancedRules");
+            this.menuImportAdvancedRules.Click += new System.EventHandler(this.menuImportAdvancedRules_Click);
             // 
             // MenuItemAdvanced
             // 
@@ -443,5 +474,9 @@
         private System.Windows.Forms.CheckBox chkenableRoutingAdvanced;
         private System.Windows.Forms.ToolStripMenuItem MenuItemBasic;
         private System.Windows.Forms.ToolStripMenuItem menuImportBasicRules;
+        private System.Windows.Forms.ComboBox cmbdomainMatcher;
+        private System.Windows.Forms.Label label6;
+        private System.Windows.Forms.ToolStripMenuItem menuImportAdvancedRules;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
     }
 }

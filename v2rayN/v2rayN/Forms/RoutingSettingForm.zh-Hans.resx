@@ -145,6 +145,12 @@
   <data name="panel1.Size" type="System.Drawing.Size, System.Drawing">
     <value>817, 51</value>
   </data>
+  <data name="label6.Size" type="System.Drawing.Size, System.Drawing">
+    <value>77, 12</value>
+  </data>
+  <data name="label6.Text" xml:space="preserve">
+    <value>域名匹配算法</value>
+  </data>
   <data name="chkenableRoutingAdvanced.Size" type="System.Drawing.Size, System.Drawing">
     <value>120, 16</value>
   </data>
@@ -158,7 +164,7 @@
     <value>域名解析策略</value>
   </data>
   <data name="cmsLv.Size" type="System.Drawing.Size, System.Drawing">
-    <value>149, 92</value>
+    <value>149, 114</value>
   </data>
   <data name="menuAdd.Size" type="System.Drawing.Size, System.Drawing">
     <value>148, 22</value>
@@ -296,6 +302,9 @@
   </data>
   <data name="lvRoutings.Size" type="System.Drawing.Size, System.Drawing">
     <value>803, 437</value>
+  </data>
+  <data name="menuImportAdvancedRules.Text" xml:space="preserve">
+    <value>一键导入高级规则</value>
   </data>
   <data name="$this.ClientSize" type="System.Drawing.Size, System.Drawing">
     <value>817, 605</value>

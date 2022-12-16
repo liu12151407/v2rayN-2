@@ -31,13 +31,7 @@ namespace v2rayN.Handler
         }
 
 
-        public List<ServerStatItem> Statistic
-        {
-            get
-            {
-                return serverStatistics_.server;
-            }
-        }
+        public List<ServerStatItem> Statistic => serverStatistics_.server;
 
         public StatisticsHandler(Mode.Config config, Action<ulong, ulong, List<ServerStatItem>> update)
         {
@@ -68,7 +62,7 @@ namespace v2rayN.Handler
 
             GrpcInit();
 
-            Task.Run(() => Run());
+            Task.Run(Run);
         }
 
         private void GrpcInit()
@@ -116,7 +110,7 @@ namespace v2rayN.Handler
 
                         if (res != null)
                         {
-                            string itemId = config_.getItemId();
+                            string itemId = config_.indexId;
                             ServerStatItem serverStatItem = GetServerStatItem(itemId);
 
                             //TODO: parse output
@@ -133,7 +127,8 @@ namespace v2rayN.Handler
                             }
                         }
                     }
-                    Thread.Sleep(config_.statisticsFreshRate);
+                    var sleep = config_.statisticsFreshRate < 1 ? 1 : config_.statisticsFreshRate;
+                    Thread.Sleep(1000 * sleep);
                     channel_.ConnectAsync();
                 }
                 catch (Exception ex)
@@ -196,15 +191,16 @@ namespace v2rayN.Handler
         {
             if (serverStatistics_ != null)
             {
-                foreach (var item in serverStatistics_.server)
-                {
-                    item.todayUp = 0;
-                    item.todayDown = 0;
-                    item.totalUp = 0;
-                    item.totalDown = 0;
-                    // update ui display to zero
-                    updateFunc_(0, 0, new List<ServerStatItem> { item });
-                }
+                //foreach (var item in serverStatistics_.server)
+                //{
+                //    item.todayUp = 0;
+                //    item.todayDown = 0;
+                //    item.totalUp = 0;
+                //    item.totalDown = 0;
+                //    // update ui display to zero
+                //    updateFunc_(0, 0, new List<ServerStatItem> { item });
+                //}
+                serverStatistics_.server = new List<ServerStatItem>();
 
                 // update statistic json file
                 SaveToFile();
