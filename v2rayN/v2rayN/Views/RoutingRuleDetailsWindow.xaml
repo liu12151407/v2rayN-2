@@ -16,6 +16,7 @@
     Background="{DynamicResource MaterialDesignPaper}"
     FontFamily="{x:Static conv:MaterialDesignFonts.MyFont}"
     ResizeMode="NoResize"
+    ShowInTaskbar="False"
     TextElement.FontFamily="{x:Static conv:MaterialDesignFonts.MyFont}"
     TextElement.Foreground="{DynamicResource MaterialDesignBody}"
     TextOptions.TextFormattingMode="Display"
@@ -65,7 +66,8 @@
                 Grid.Column="1"
                 Width="200"
                 Margin="4"
-                HorizontalAlignment="Left" />
+                HorizontalAlignment="Left"
+                Style="{StaticResource DefTextBox}" />
 
             <TextBlock
                 Grid.Row="2"
@@ -80,6 +82,7 @@
                 Grid.Column="1"
                 Margin="4"
                 HorizontalAlignment="Left"
+                FontSize="{DynamicResource StdFontSize}"
                 Style="{StaticResource MaterialDesignFilterChipPrimaryListBox}" />
 
             <TextBlock
@@ -94,6 +97,7 @@
                 Grid.Row="3"
                 Grid.Column="1"
                 Margin="4"
+                FontSize="{DynamicResource StdFontSize}"
                 Style="{StaticResource MaterialDesignFilterChipPrimaryListBox}" />
 
             <TextBlock
@@ -130,7 +134,7 @@
         </Grid>
 
         <Grid
-            Margin="16"
+            Margin="8"
             HorizontalAlignment="Center"
             DockPanel.Dock="Bottom">
             <Grid.ColumnDefinitions>
@@ -143,7 +147,7 @@
                 HorizontalAlignment="Left"
                 VerticalAlignment="Center">
                 <CheckBox x:Name="chkAutoSort">
-                    <TextBlock Text="{x:Static resx:ResUI.TbAutoSort}" />
+                    <TextBlock Style="{StaticResource ToolbarTextBlock}" Text="{x:Static resx:ResUI.TbAutoSort}" />
                 </CheckBox>
             </StackPanel>
             <Button
@@ -168,25 +172,41 @@
                 <ColumnDefinition Width="1*" />
                 <ColumnDefinition Width="10" />
                 <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition Width="1*" />
             </Grid.ColumnDefinitions>
             <GroupBox
                 Grid.Column="0"
-                Header="Domain"
-                Style="{StaticResource MaterialDesignGroupBox}">
+                Header="{x:Static resx:ResUI.TbRoutingRuleDomain}"
+                Style="{StaticResource MyGroupBox}">
                 <TextBox
                     Name="txtDomain"
                     AcceptsReturn="True"
+                    Style="{StaticResource DefTextBox}"
                     TextWrapping="Wrap"
                     VerticalScrollBarVisibility="Auto" />
             </GroupBox>
             <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" />
             <GroupBox
                 Grid.Column="2"
-                Header="IP"
-                Style="{StaticResource MaterialDesignGroupBox}">
+                Header="{x:Static resx:ResUI.TbRoutingRuleIP}"
+                Style="{StaticResource MyGroupBox}">
                 <TextBox
                     Name="txtIP"
                     AcceptsReturn="True"
+                    Style="{StaticResource DefTextBox}"
+                    TextWrapping="Wrap"
+                    VerticalScrollBarVisibility="Auto" />
+            </GroupBox>
+            <GridSplitter Grid.Column="3" HorizontalAlignment="Stretch" />
+            <GroupBox
+                Grid.Column="4"
+                Header="{x:Static resx:ResUI.TbRoutingRuleProcess}"
+                Style="{StaticResource MyGroupBox}">
+                <TextBox
+                    Name="txtProcess"
+                    AcceptsReturn="True"
+                    Style="{StaticResource DefTextBox}"
                     TextWrapping="Wrap"
                     VerticalScrollBarVisibility="Auto" />
             </GroupBox>

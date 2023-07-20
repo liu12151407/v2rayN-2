@@ -20,6 +20,7 @@
                 Margin="8,0"
                 VerticalAlignment="Center"
                 Foreground="{DynamicResource PrimaryHueLightBrush}"
+                Style="{StaticResource ToolbarTextBlock}"
                 Text="{x:Static resx:ResUI.MsgInformationTitle}" />
             <ComboBox
                 x:Name="cmbMsgFilter"
@@ -27,10 +28,13 @@
                 Margin="8,0"
                 materialDesign:HintAssist.Hint="{x:Static resx:ResUI.MsgFilterTitle}"
                 materialDesign:TextFieldAssist.HasClearButton="True"
-                IsEditable="True" />
+                IsEditable="True"
+                Style="{StaticResource DefComboBox}"
+                TextBoxBase.TextChanged="cmbMsgFilter_TextChanged" />
             <TextBlock
                 Margin="8,0"
                 VerticalAlignment="Center"
+                Style="{StaticResource ToolbarTextBlock}"
                 Text="{x:Static resx:ResUI.TbAutoRefresh}" />
             <ToggleButton
                 x:Name="togAutoRefresh"
@@ -41,9 +45,11 @@
         <TextBox
             Name="txtMsg"
             BorderThickness="0"
-            FontSize="11"
+            FontSize="{DynamicResource StdFontSizeMsg}"
             HorizontalScrollBarVisibility="Auto"
             IsReadOnly="True"
+            IsReadOnlyCaretVisible="True"
+            TextAlignment="Left"
             TextWrapping="Wrap"
             VerticalScrollBarVisibility="Visible">
             <TextBox.ContextMenu>
@@ -68,11 +74,8 @@
                         Height="{StaticResource MenuItemHeight}"
                         Click="menuMsgViewClear_Click"
                         Header="{x:Static resx:ResUI.menuMsgViewClear}" />
-
                 </ContextMenu>
             </TextBox.ContextMenu>
         </TextBox>
-
-
     </DockPanel>
 </UserControl>
