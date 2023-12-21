@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.IO;
+using System.Reactive.Linq;
 using System.Text;
 using v2rayN.Mode;
 using v2rayN.Resx;
@@ -34,7 +35,7 @@ namespace v2rayN.Handler
                 return;
             }
 
-            string fileName = Utils.GetConfigPath(Global.coreConfigFileName);
+            string fileName = Utils.GetConfigPath(Global.CoreConfigFileName);
             if (CoreConfigHandler.GenerateClientConfig(node, fileName, out string msg, out string content) != 0)
             {
                 ShowMsg(false, msg);
@@ -45,6 +46,24 @@ namespace v2rayN.Handler
                 ShowMsg(true, $"{node.GetSummary()}");
                 CoreStop();
                 CoreStart(node);
+
+                //In tun mode, do a delay check and restart the core
+                if (_config.tunModeItem.enableTun)
+                {
+                    Observable.Range(1, 1)
+                    .Delay(TimeSpan.FromSeconds(15))
+                    .Subscribe(x =>
+                    {
+                        {
+                            if (_process == null || _process.HasExited)
+                            {
+                                CoreStart(node);
+                                ShowMsg(false, "Tun mode restart the core once");
+                                Utils.SaveLog("Tun mode restart the core once");
+                            }
+                        }
+                    });
+                }
             }
         }
 
@@ -152,7 +171,7 @@ namespace v2rayN.Handler
 
         private void CoreStart(ProfileItem node)
         {
-            ShowMsg(false, string.Format(ResUI.StartService, DateTime.Now.ToString()));
+            ShowMsg(false, string.Format(ResUI.StartService, DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")));
 
             ECoreType coreType;
             if (node.configType != EConfigType.Custom && _config.tunModeItem.enableTun)
@@ -185,11 +204,11 @@ namespace v2rayN.Handler
                         address = Global.Loopback,
                         port = node.preSocksPort
                     };
-                    string fileName2 = Utils.GetConfigPath(Global.corePreConfigFileName);
+                    string fileName2 = Utils.GetConfigPath(Global.CorePreConfigFileName);
                     if (CoreConfigHandler.GenerateClientConfig(itemSocks, fileName2, out string msg2, out string configStr) == 0)
                     {
                         var coreInfo2 = LazyConfig.Instance.GetCoreInfo(ECoreType.sing_box);
-                        var proc2 = RunProcess(node, coreInfo2, $" -c {Global.corePreConfigFileName}", true, ShowMsg);
+                        var proc2 = RunProcess(node, coreInfo2, $" -c {Global.CorePreConfigFileName}", true, ShowMsg);
                         if (proc2 is not null)
                         {
                             _processPre = proc2;
@@ -201,7 +220,7 @@ namespace v2rayN.Handler
 
         private int CoreStartViaString(string configStr)
         {
-            ShowMsg(false, string.Format(ResUI.StartService, DateTime.Now.ToString()));
+            ShowMsg(false, string.Format(ResUI.StartService, DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")));
 
             try
             {
@@ -253,7 +272,7 @@ namespace v2rayN.Handler
                     throw new Exception(p.StandardError.ReadToEnd());
                 }
 
-                Global.processJob.AddProcess(p.Handle);
+                Global.ProcessJob.AddProcess(p.Handle);
                 return p.Id;
             }
             catch (Exception ex)
@@ -327,7 +346,7 @@ namespace v2rayN.Handler
                     throw new Exception(displayLog ? proc.StandardError.ReadToEnd() : "启动进程失败并退出 (Failed to start the process and exited)");
                 }
 
-                Global.processJob.AddProcess(proc.Handle);
+                Global.ProcessJob.AddProcess(proc.Handle);
                 return proc;
             }
             catch (Exception ex)
